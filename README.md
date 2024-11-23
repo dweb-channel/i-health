@@ -7,7 +7,7 @@
 i_health 是一款专为 iOS 设计的经期追踪应用，采用 Flutter 框架开发，提供直观的界面和全面的经期管理功能。注重隐私保护，所有数据均存储在本地。
 
 
-<div align="center" style="display: flex; flex-wrap: wrap; justify-content: center;"></div>
+<div align="center" style="display: flex;  justify-content: center;"></div>
   <img src="assets/store/1.png" alt="i_health Screenshots" height="300"/>
   <img src="assets/store/2.png" alt="i_health Screenshots" height="300"/>
   <img src="assets/store/3.png" alt="i_health Screenshots" height="300"/>
