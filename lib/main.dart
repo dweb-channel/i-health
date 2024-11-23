@@ -1,32 +1,67 @@
-import 'package:flutter/material.dart';
+// 导入必要的包
+import 'package:flutter/cupertino.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'pages/calendar_page.dart';
+import 'pages/insights_page.dart';
+import 'pages/log_page.dart';
+import 'pages/settings_page.dart';
 
+// 应用程序入口
 void main() async {
+  // 确保Flutter绑定初始化
   WidgetsFlutterBinding.ensureInitialized();
+  // 初始化Hive数据库
   await Hive.initFlutter();
+  // 初始化通知系统
+  await _initializeNotifications();
   runApp(const MyApp());
 }
 
+// 通知插件实例
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+// 初始化通知系统的配置
+Future<void> _initializeNotifications() async {
+  // iOS通知设置
+  const DarwinInitializationSettings initializationSettingsIOS =
+      DarwinInitializationSettings(
+    requestSoundPermission: true,  // 请求声音权限
+    requestBadgePermission: true,  // 请求角标权限
+    requestAlertPermission: true,  // 请求通知权限
+  );
+
+  // 通知系统初始化设置
+  const InitializationSettings initializationSettings = InitializationSettings(
+    iOS: initializationSettingsIOS,
+  );
+
+  // 初始化通知插件
+  await flutterLocalNotificationsPlugin.initialize(
+    initializationSettings,
+  );
+}
+
+// 应用程序根组件
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const CupertinoApp(
       title: '经期追踪',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.pink,
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
+      theme: CupertinoThemeData(
+        primaryColor: CupertinoColors.systemPink,  // 主题色为粉色
+        brightness: Brightness.light,              // 亮色主题
+        scaffoldBackgroundColor: CupertinoColors.systemBackground,
       ),
-      home: const HomePage(),
+      home: HomePage(),
     );
   }
 }
 
+// 主页面（包含底部导航栏）
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -35,81 +70,55 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // 当前选中的底部导航项索引
   int _selectedIndex = 0;
-
-  final List<Widget> _pages = [
-    const CalendarPage(),
-    const LogPage(),
-    const InsightsPage(),
-    const SettingsPage(),
-  ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (int index) {
+    return CupertinoTabScaffold(
+      // 底部导航栏配置
+      tabBar: CupertinoTabBar(
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.calendar),
+            label: '日历',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.plus_circle),
+            label: '记录',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.graph_circle),
+            label: '分析',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.settings),
+            label: '设置',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        activeColor: CupertinoColors.systemPink,  // 选中项的颜色
+        onTap: (index) {
           setState(() {
             _selectedIndex = index;
           });
         },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.calendar_today),
-            label: '日历',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.add_circle_outline),
-            label: '记录',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.insights),
-            label: '分析',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings),
-            label: '设置',
-          ),
-        ],
       ),
+      // 根据选中的索引返回对应的页面
+      tabBuilder: (context, index) {
+        switch (index) {
+          case 0:
+            return const CalendarPage();  // 日历页面
+          case 1:
+            return const LogPage();       // 记录页面
+          case 2:
+            return const InsightsPage();  // 分析页面
+          case 3:
+            return const SettingsPage();  // 设置页面
+          default:
+            return const CalendarPage();
+        }
+      },
     );
-  }
-}
-
-class CalendarPage extends StatelessWidget {
-  const CalendarPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('日历页面 - 开发中'));
-  }
-}
-
-class LogPage extends StatelessWidget {
-  const LogPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('记录页面 - 开发中'));
-  }
-}
-
-class InsightsPage extends StatelessWidget {
-  const InsightsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('分析页面 - 开发中'));
-  }
-}
-
-class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('设置页面 - 开发中'));
   }
 }
