@@ -1,16 +1,19 @@
 import 'package:hive/hive.dart';
 import '../models/period_record.dart';
+import 'notification_service.dart';
 
 // 经期服务类 - 处理所有与经期相关的数据操作
 class PeriodService {
   // Hive数据库实例
   static const String _boxName = 'period_records';
   late Box<PeriodRecord> _box;
+  final _notificationService = NotificationService();
 
   // 初始化服务
   Future<void> init() async {
     Hive.registerAdapter(PeriodRecordAdapter());
     _box = await Hive.openBox<PeriodRecord>(_boxName);
+    await _notificationService.init();
   }
 
   // 添加新的经期记录
@@ -93,7 +96,27 @@ class PeriodService {
   }
 
   // 安排通知
-  Future<void> scheduleNotification(DateTime nextPeriod) async {
-    // TODO: 实现通知安排
+  Future<void> scheduleNotification(DateTime nextPeriod, int daysInAdvance) async {
+    await _notificationService.schedulePeriodNotification(nextPeriod, daysInAdvance);
+  }
+
+  // 取消所有通知
+  Future<void> cancelAllNotifications() async {
+    await _notificationService.cancelAllNotifications();
+  }
+
+  // 检查通知权限
+  Future<bool> checkNotificationPermissions() async {
+    return await _notificationService.checkNotificationPermissions();
+  }
+
+  /// 清除所有经期数据
+  Future<void> clearAllData() async {
+    await _box.clear();
+  }
+
+  /// 恢复经期数据
+  Future<void> restoreRecord(PeriodRecord record) async {
+    await _box.add(record);
   }
 }
