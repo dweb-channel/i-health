@@ -46,8 +46,10 @@ class PeriodService {
     int totalDays = 0;
     int count = 0;
     for (int i = 0; i < records.length - 1; i++) {
-      final difference = records[i].startDate.difference(records[i + 1].startDate).inDays;
-      if (difference > 0 && difference < 45) { // Filter out potentially incorrect data
+      final difference =
+          records[i].startDate.difference(records[i + 1].startDate).inDays;
+      if (difference > 0 && difference < 45) {
+        // Filter out potentially incorrect data
         totalDays += difference;
         count++;
       }
@@ -81,11 +83,12 @@ class PeriodService {
     if (records.length < 2) return 0;
 
     records.sort((a, b) => a.startDate.compareTo(b.startDate));
-    
+
     int totalDays = 0;
     int count = 0;
     for (int i = 0; i < records.length - 1; i++) {
-      final difference = records[i + 1].startDate.difference(records[i].startDate).inDays;
+      final difference =
+          records[i + 1].startDate.difference(records[i].startDate).inDays;
       if (difference > 0 && difference < 45) {
         totalDays += difference;
         count++;
@@ -96,8 +99,10 @@ class PeriodService {
   }
 
   // 安排通知
-  Future<void> scheduleNotification(DateTime nextPeriod, int daysInAdvance) async {
-    await _notificationService.schedulePeriodNotification(nextPeriod, daysInAdvance);
+  Future<void> scheduleNotification(
+      DateTime nextPeriod, int daysInAdvance) async {
+    await _notificationService.schedulePeriodNotification(
+        nextPeriod, daysInAdvance);
   }
 
   // 取消所有通知
@@ -118,5 +123,10 @@ class PeriodService {
   /// 恢复经期数据
   Future<void> restoreRecord(PeriodRecord record) async {
     await _box.add(record);
+  }
+
+  // 请求通知权限
+  requestNotificationPermissions() {
+    return _notificationService.requestNotificationPermissions();
   }
 }

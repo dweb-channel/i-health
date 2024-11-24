@@ -1,4 +1,3 @@
-// 导入必要的包
 import 'package:flutter/cupertino.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -6,6 +5,7 @@ import 'pages/calendar_page.dart';
 import 'pages/insights_page.dart';
 import 'pages/log_page.dart';
 import 'pages/settings_page.dart';
+import 'services/navigation_service.dart';
 
 // 应用程序入口
 void main() async {
@@ -13,35 +13,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // 初始化Hive数据库
   await Hive.initFlutter();
-  // 初始化通知系统
-  await _initializeNotifications();
   runApp(const MyApp());
 }
 
 // 通知插件实例
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
-
-// 初始化通知系统的配置
-Future<void> _initializeNotifications() async {
-  // iOS通知设置
-  const DarwinInitializationSettings initializationSettingsIOS =
-      DarwinInitializationSettings(
-    requestSoundPermission: true,  // 请求声音权限
-    requestBadgePermission: true,  // 请求角标权限
-    requestAlertPermission: true,  // 请求通知权限
-  );
-
-  // 通知系统初始化设置
-  const InitializationSettings initializationSettings = InitializationSettings(
-    iOS: initializationSettingsIOS,
-  );
-
-  // 初始化通知插件
-  await flutterLocalNotificationsPlugin.initialize(
-    initializationSettings,
-  );
-}
 
 // 应用程序根组件
 class MyApp extends StatelessWidget {
@@ -52,8 +29,8 @@ class MyApp extends StatelessWidget {
     return const CupertinoApp(
       title: '经期追踪',
       theme: CupertinoThemeData(
-        primaryColor: CupertinoColors.systemPink,  // 主题色为粉色
-        brightness: Brightness.light,              // 亮色主题
+        primaryColor: CupertinoColors.systemPink, // 主题色为粉色
+        brightness: Brightness.light, // 亮色主题
         scaffoldBackgroundColor: CupertinoColors.systemBackground,
       ),
       home: HomePage(),
@@ -72,6 +49,15 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   // 当前选中的底部导航项索引
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // 设置导航服务的context
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NavigationService().setContext(context);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +83,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
         currentIndex: _selectedIndex,
-        activeColor: CupertinoColors.systemPink,  // 选中项的颜色
+        activeColor: CupertinoColors.systemPink, // 选中项的颜色
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
@@ -108,13 +94,13 @@ class _HomePageState extends State<HomePage> {
       tabBuilder: (context, index) {
         switch (index) {
           case 0:
-            return const CalendarPage();  // 日历页面
+            return const CalendarPage(); // 日历页面
           case 1:
-            return const LogPage();       // 记录页面
+            return const LogPage(); // 记录页面
           case 2:
-            return const InsightsPage();  // 分析页面
+            return const InsightsPage(); // 分析页面
           case 3:
-            return const SettingsPage();  // 设置页面
+            return const SettingsPage(); // 设置页面
           default:
             return const CalendarPage();
         }

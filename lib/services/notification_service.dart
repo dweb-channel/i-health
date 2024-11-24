@@ -1,6 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
+import 'navigation_service.dart';
 
 /// 通知服务类 - 处理应用的所有本地通知功能
 /// 使用单例模式确保整个应用只有一个通知服务实例
@@ -17,7 +18,6 @@ class NotificationService {
   /// 初始化通知服务
   /// - 设置时区
   /// - 配置通知渠道
-  /// - 请求必要的权限
   Future<void> init() async {
     // 初始化时区数据，用于准确调度通知
     tz.initializeTimeZones();
@@ -28,9 +28,9 @@ class NotificationService {
 
     // 配置 iOS 通知设置
     const initializationSettingsIOS = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
     );
 
     // 组合平台特定的设置
@@ -43,20 +43,10 @@ class NotificationService {
     await _notificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // TODO: 处理通知点击事件
-        // 可以在这里添加导航到特定页面的逻辑
+        // 使用导航服务进行导航
+        NavigationService().navigateToHome();
       },
     );
-
-    // 请求 iOS 通知权限
-    await _notificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
   }
 
   /// 安排经期提醒通知
@@ -114,14 +104,12 @@ class NotificationService {
     await _notificationsPlugin.cancelAll();
   }
 
-  /// 检查通知权限状态
-  /// 返回 true 如果有权限，false 如果没有权限
-  Future<bool> checkNotificationPermissions() async {
-    // 获取 iOS 平台特定实现
+  /// 请求通知权限
+  /// 返回 true 如果用户授予权限，false 如果用户拒绝或发生错误
+  Future<bool> requestNotificationPermissions() async {
     final platform = _notificationsPlugin.resolvePlatformSpecificImplementation<
         IOSFlutterLocalNotificationsPlugin>();
     if (platform != null) {
-      // 请求权限并获取结果
       final result = await platform.requestPermissions(
         alert: true,
         badge: true,
@@ -130,5 +118,15 @@ class NotificationService {
       return result ?? false;
     }
     return false;
+  }
+
+  /// 检查通知权限状态
+  /// 返回 true 如果有权限，false 如果没有权限
+  Future<bool> checkNotificationPermissions() async {
+    final bool? granted = await _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.areNotificationsEnabled();
+    return granted ?? false;
   }
 }

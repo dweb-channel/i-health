@@ -10,6 +10,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:convert';
 import '../services/period_service.dart';
 import '../models/period_record.dart';
+import '../services/notification_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -24,7 +25,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final PeriodService _periodService;
 
   // 通知开关状态
-  bool _notificationsEnabled = true;
+  bool _notificationsEnabled = false;  // 默认关闭通知
   // 提前提醒天数
   int _reminderDays = 2;
   // 导出格式选择
@@ -41,22 +42,18 @@ class _SettingsPageState extends State<SettingsPage> {
     await _periodService.init();
     await _loadSettings();
 
-    // 检查并请求通知权限
+    // 检查通知权限状态
     final hasPermission = await _periodService.checkNotificationPermissions();
-    if (hasPermission) {
-      _updateNotifications();
-    } else {
-      setState(() {
-        _notificationsEnabled = false;
-      });
-      await _saveSettings();
-    }
+    setState(() {
+      _notificationsEnabled = hasPermission;
+    });
+    await _saveSettings();
   }
 
   Future<void> _loadSettings() async {
     _prefs = await SharedPreferences.getInstance();
     setState(() {
-      _notificationsEnabled = _prefs.getBool('notifications_enabled') ?? true;
+      _notificationsEnabled = _prefs.getBool('notifications_enabled') ?? false;
       _reminderDays = _prefs.getInt('reminder_days') ?? 2;
       _exportFormat = _prefs.getString('export_format') ?? 'CSV';
     });
@@ -77,6 +74,44 @@ class _SettingsPageState extends State<SettingsPage> {
     } else {
       await _periodService.cancelAllNotifications();
     }
+  }
+
+  Future<void> _toggleNotifications(bool value) async {
+    if (value) {
+      // 初始化通知服务
+      final notificationService = NotificationService();
+      await notificationService.init();
+      
+      // 请求通知权限
+      final hasPermission = await notificationService.requestNotificationPermissions();
+      if (hasPermission) {
+        setState(() {
+          _notificationsEnabled = true;
+        });
+        // 如果有下一次经期日期，设置通知
+        await _updateNotifications();
+      } else {
+        // 如果用户拒绝了权限，显示提示
+        if (mounted) {
+          _showAlert(
+            context,
+            '通知权限',
+            '需要通知权限才能发送提醒。请在系统设置中启用通知权限。',
+          );
+        }
+        setState(() {
+          _notificationsEnabled = false;
+        });
+      }
+    } else {
+      // 关闭通知
+      final notificationService = NotificationService();
+      await notificationService.cancelAllNotifications();
+      setState(() {
+        _notificationsEnabled = false;
+      });
+    }
+    await _saveSettings();
   }
 
   Future<void> _exportData() async {
@@ -199,7 +234,7 @@ class _SettingsPageState extends State<SettingsPage> {
         // 恢复设置
         final settings = backupData['settings'];
         setState(() {
-          _notificationsEnabled = settings['notifications_enabled'] ?? true;
+          _notificationsEnabled = settings['notifications_enabled'] ?? false;
           _reminderDays = settings['reminder_days'] ?? 2;
           _exportFormat = settings['export_format'] ?? 'CSV';
         });
@@ -258,7 +293,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // 重置设置状态
       setState(() {
-        _notificationsEnabled = true;
+        _notificationsEnabled = false;
         _reminderDays = 2;
         _exportFormat = 'CSV';
       });
@@ -385,35 +420,13 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildSwitchItem(
                   '启用通知',
                   _notificationsEnabled,
-                  (value) async {
-                    if (value && !_notificationsEnabled) {
-                      final hasPermission =
-                          await _periodService.checkNotificationPermissions();
-                      if (!hasPermission) {
-                        if (mounted) {
-                          _showAlert(
-                            context,
-                            '通知权限',
-                            '请在系统设置中允许应用发送通知',
-                          );
-                        }
-                        return;
-                      }
-                    }
-                    setState(() {
-                      _notificationsEnabled = value;
-                    });
-                    await _saveSettings();
-                    await _updateNotifications();
-                  },
+                  _toggleNotifications,
                 ),
                 if (_notificationsEnabled)
                   _buildPickerItem(
                     '提前提醒天数',
-                    _reminderDays.toString(),
-                    () {
-                      _showDaysPicker();
-                    },
+                    '$_reminderDays 天',
+                    _showDaysPicker,
                   ),
               ],
             ),
@@ -424,9 +437,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildPickerItem(
                   '导出格式',
                   _exportFormat,
-                  () {
-                    _showFormatPicker();
-                  },
+                  _showFormatPicker,
                 ),
                 _buildNavigationItem(
                   '导出数据',
