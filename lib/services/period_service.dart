@@ -1,6 +1,7 @@
 import 'package:hive/hive.dart';
 import '../models/period_record.dart';
 import 'notification_service.dart';
+import 'database_service.dart';
 
 // 经期服务类 - 处理所有与经期相关的数据操作
 class PeriodService {
@@ -8,17 +9,25 @@ class PeriodService {
   static const String _boxName = 'period_records';
   late Box<PeriodRecord> _box;
   final _notificationService = NotificationService();
+  final _databaseService = DatabaseService();
 
   // 初始化服务
   Future<void> init() async {
     Hive.registerAdapter(PeriodRecordAdapter());
     _box = await Hive.openBox<PeriodRecord>(_boxName);
+    await _databaseService.init();
     await _notificationService.init();
   }
 
   // 添加新的经期记录
   Future<void> addRecord(PeriodRecord record) async {
     await _box.add(record);
+    await _databaseService.addPeriodRecord(record);
+    // 更新通知
+    final nextPeriod = predictNextPeriod();
+    if (nextPeriod != null) {
+      await _notificationService.schedulePeriodNotification(nextPeriod, 2);
+    }
   }
 
   // 获取所有经期记录
@@ -118,6 +127,8 @@ class PeriodService {
   /// 清除所有经期数据
   Future<void> clearAllData() async {
     await _box.clear();
+    await _databaseService.clearAllPeriodRecords();
+    await _notificationService.cancelAllNotifications();
   }
 
   /// 恢复经期数据
